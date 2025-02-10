@@ -313,19 +313,23 @@
                 const panoramaPath = `assets/panoramas/${cleanId}.png`;
                 console.log('Panorama yükleniyor:', panoramaPath);
                 
-                const sky = document.querySelector('a-sky');
-                sky.setAttribute('src', panoramaPath);
+                // Önce img elementini güncelle
+                const panoramaImg = document.getElementById('panoramaImage');
+                panoramaImg.crossOrigin = 'anonymous'; // CORS için
+                panoramaImg.src = panoramaPath;
                 
-                sky.addEventListener('loaded', function() {
-                    console.log('Panorama başarıyla yüklendi');
+                panoramaImg.onload = function() {
+                    console.log('Panorama img yüklendi');
+                    const sky = document.querySelector('a-sky');
+                    sky.setAttribute('src', '#panoramaImage');
                     imageLoaded = true;
                     hideLoadingIfReady();
-                });
+                };
 
-                sky.addEventListener('error', function(error) {
+                panoramaImg.onerror = function(error) {
                     console.error('Panorama yükleme hatası:', error);
                     setTimeout(() => tryLoadImage(), 2000);
-                });
+                };
             }
             
             // A-Frame sahnesinin hazır olmasını bekle
