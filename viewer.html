@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>360° VR Görüntüleyici</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- A-Frame ve gerekli eklentiler -->
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://unpkg.com/aframe-environment-component@1.3.2/dist/aframe-environment-component.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
+    
+    <style>
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #000000, #1a1a2e);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            font-family: 'Poppins', sans-serif;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+
+        .loader-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin-bottom: 20px;
+        }
+
+        .loader-circle {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            border-top-color: #4ff;
+            animation: spin 1s linear infinite;
+        }
+
+        .loader-circle:nth-child(2) {
+            width: 80%;
+            height: 80%;
+            top: 10%;
+            left: 10%;
+            border-top-color: #0ff;
+            animation-duration: 1.5s;
+            animation-direction: reverse;
+        }
+
+        .loader-circle:nth-child(3) {
+            width: 60%;
+            height: 60%;
+            top: 20%;
+            left: 20%;
+            border-top-color: #08f;
+            animation-duration: 2s;
+        }
+
+        .loader-text {
+            font-size: 1.5em;
+            margin-top: 20px;
+            text-align: center;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            opacity: 0.9;
+        }
+
+        .loader-subtext {
+            font-size: 1em;
+            margin-top: 10px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        .loader-progress {
+            width: 200px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+
+        .loader-progress-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #4ff, #0ff);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+            animation: progress-glow 1.5s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes progress-glow {
+            0% { box-shadow: 0 0 5px rgba(0, 255, 255, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(0, 255, 255, 0.8); }
+            100% { box-shadow: 0 0 5px rgba(0, 255, 255, 0.5); }
+        }
+
+        .vr-controls {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .vr-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: all 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-10px);
+        }
+
+        .vr-menu.active {
+            opacity: 1;
+            pointer-events: all;
+            transform: translateY(0);
+        }
+
+        .vr-button {
+            background: rgba(20, 20, 20, 0.6);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 8px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            font-size: 18px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .vr-button:hover {
+            background: rgba(40, 40, 40, 0.8);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .menu-button {
+            z-index: 1001;
+        }
+
+        .menu-button.active {
+            background: rgba(60, 60, 60, 0.8);
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+
+        #vr-info {
+            position: fixed;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20, 20, 20, 0.6);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 14px;
+            z-index: 1000;
+            display: none;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div id="loading-screen">
+        <div class="loader-container">
+            <div class="loader-circle"></div>
+            <div class="loader-circle"></div>
+            <div class="loader-circle"></div>
+        </div>
+        <div class="loader-text">VR Deneyimi Başlıyor</div>
+        <div class="loader-subtext">Akıllı Kitap Platformu</div>
+        <div class="loader-progress">
+            <div class="loader-progress-bar"></div>
+        </div>
+    </div>
+    <div id="vr-info">VR modundasınız. Çıkmak için gözlüğü çıkarın veya ESC tuşuna basın.</div>
+
+    <!-- A-Frame Scene -->
+    <a-scene 
+        loading-screen="enabled: false"
+        device-orientation-permission-ui="enabled: true"
+        vr-mode-ui="enabled: false">
+        
+        <a-assets>
+            <img id="panoramaImage" crossorigin="anonymous">
+        </a-assets>
+
+        <!-- 360° Panorama -->
+        <a-sky 
+            src="#panoramaImage" 
+            rotation="0 -90 0">
+        </a-sky>
+
+        <!-- Kamera ve Kontroller -->
+        <a-entity position="0 1.6 0">
+            <a-camera 
+                fov="55"
+                look-controls="reverseMouseDrag: false; touchEnabled: true; magicWindowTrackingEnabled: true"
+                wasd-controls="enabled: true; fly: false"
+                rotation-reader>
+                
+                <!-- VR ve Mobil için etkileşim imleci - sadece VR modunda görünür -->
+                <a-entity
+                    cursor="fuse: true; fuseTimeout: 500"
+                    position="0 0 -1"
+                    geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.015"
+                    material="color: #ffffff; shader: flat; opacity: 0.5"
+                    visible="false"
+                    animation__click="property: scale; startEvents: click; easing: easeInCubic; dur: 150; from: 0.1 0.1 0.1; to: 1 1 1"
+                    animation__fusing="property: scale; startEvents: fusing; easing: easeInCubic; dur: 1500; from: 1 1 1; to: 0.1 0.1 0.1"
+                    animation__mouseleave="property: scale; startEvents: mouseleave; easing: easeInCubic; dur: 500; to: 1 1 1">
+                </a-entity>
+            </a-camera>
+        </a-entity>
+
+        <!-- Ortam Işığı -->
+        <a-entity light="type: ambient; intensity: 1.2"></a-entity>
+    </a-scene>
+
+    <!-- Kontrol Butonları -->
+    <div class="vr-controls">
+        <button class="vr-button menu-button" onclick="toggleMenu()" title="Menü">
+            <span class="emoji">⋮</span>
+        </button>
+        <div class="vr-menu">
+            <button class="vr-button" onclick="document.querySelector('a-scene').enterVR()" title="VR Modunu Başlat">
+                <span class="emoji">ᯅ</span>
+            </button>
+            <button class="vr-button" onclick="toggleFullscreen()" title="Tam Ekran">
+                <span class="emoji">⛶</span>
+            </button>
+            <button class="vr-button" onclick="window.location.href = 'index.html'" title="Galeriye Dön">
+                <span class="emoji">↩️</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('load', function() {
+            const params = new URLSearchParams(window.location.search);
+            const panoramaId = params.get('panorama');
+            const title = params.get('title');
+            const loadingScreen = document.getElementById('loading-screen');
+            const progressBar = document.querySelector('.loader-progress-bar');
+            const loaderText = document.querySelector('.loader-text');
+            let progress = 0;
+            let imageLoaded = false;
+            let sceneReady = false;
+            let imageLoadAttempts = 0;
+            const maxAttempts = 3;
+
+            // Yükleme ekranını göster
+            loadingScreen.style.display = 'flex';
+
+            function hideLoadingIfReady() {
+                if (imageLoaded && sceneReady) {
+                    // Sahnenin tam olarak hazır olması için biraz daha bekle
+                    setTimeout(() => {
+                        loadingScreen.style.opacity = '0';
+                        setTimeout(() => {
+                            loadingScreen.style.display = 'none';
+                        }, 500);
+                    }, 1000);
+                }
+            }
+
+            function tryLoadImage() {
+                if (imageLoadAttempts >= maxAttempts) {
+                    loaderText.textContent = 'Panorama yüklenemedi!';
+                    loaderText.style.color = '#ff4444';
+                    progressBar.style.background = '#ff4444';
+                    return;
+                }
+
+                imageLoadAttempts++;
+                // URL'den gelen panoramaId'yi temizle ve doğru path'i oluştur
+                const cleanId = panoramaId.replace('assets/panoramas/', '').replace('.png', '');
+                const panoramaPath = `assets/panoramas/${cleanId}.png`;
+                console.log('Panorama yükleniyor:', panoramaPath);
+                
+                const sky = document.querySelector('a-sky');
+                sky.setAttribute('src', panoramaPath);
+                
+                sky.addEventListener('loaded', function() {
+                    console.log('Panorama başarıyla yüklendi');
+                    imageLoaded = true;
+                    hideLoadingIfReady();
+                });
+
+                sky.addEventListener('error', function(error) {
+                    console.error('Panorama yükleme hatası:', error);
+                    setTimeout(() => tryLoadImage(), 2000);
+                });
+            }
+            
+            // A-Frame sahnesinin hazır olmasını bekle
+            const scene = document.querySelector('a-scene');
+            scene.addEventListener('loaded', function () {
+                console.log('A-Frame sahnesi hazır');
+                sceneReady = true;
+                hideLoadingIfReady();
+            });
+            
+            if (panoramaId) {
+                tryLoadImage();
+            } else {
+                loaderText.textContent = 'Panorama bulunamadı!';
+                loaderText.style.color = '#ff4444';
+                progressBar.style.background = '#ff4444';
+            }
+
+            // Simüle edilmiş yükleme ilerlemesi
+            const interval = setInterval(() => {
+                if (!imageLoaded || !sceneReady) {
+                    progress += Math.random() * 15;
+                    if (progress > 85) progress = 85;
+                } else {
+                    progress += Math.random() * 30;
+                    if (progress > 100) {
+                        progress = 100;
+                        clearInterval(interval);
+                    }
+                }
+                progressBar.style.width = progress + '%';
+            }, 300);
+
+            // Yükleme mesajları
+            const messages = [
+                'VR Deneyimi Yükleniyor',
+                'Sanal Ortam Hazırlanıyor',
+                'Görüntü Kalitesi Optimize Ediliyor',
+                'Son Hazırlıklar Yapılıyor'
+            ];
+            
+            let messageIndex = 0;
+            setInterval(() => {
+                if (!imageLoaded || !sceneReady) {
+                    loaderText.textContent = messages[messageIndex];
+                    messageIndex = (messageIndex + 1) % messages.length;
+                }
+            }, 2000);
+        });
+
+        // Tam ekran fonksiyonu
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // Menü toggle fonksiyonu
+        function toggleMenu() {
+            const menu = document.querySelector('.vr-menu');
+            const menuButton = document.querySelector('.menu-button');
+            menu.classList.toggle('active');
+            menuButton.classList.toggle('active');
+        }
+
+        // Menü dışına tıklandığında menüyü kapat
+        document.addEventListener('click', function(event) {
+            const menu = document.querySelector('.vr-menu');
+            const menuButton = document.querySelector('.menu-button');
+            if (!event.target.closest('.vr-controls')) {
+                menu.classList.remove('active');
+                menuButton.classList.remove('active');
+            }
+        });
+
+        // VR moduna girildiğinde bilgi mesajını göster
+        document.querySelector('a-scene').addEventListener('enter-vr', function () {
+            document.getElementById('vr-info').style.display = 'block';
+        });
+
+        // VR modundan çıkıldığında bilgi mesajını gizle
+        document.querySelector('a-scene').addEventListener('exit-vr', function () {
+            document.getElementById('vr-info').style.display = 'none';
+        });
+    </script>
+</body>
+</html>
