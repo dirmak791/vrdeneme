@@ -310,11 +310,16 @@
                 imageLoadAttempts++;
                 // URL'den gelen panoramaId'yi temizle ve doğru path'i oluştur
                 const cleanId = panoramaId.replace('assets/panoramas/', '').replace('.png', '');
-                const panoramaPath = `assets/panoramas/${cleanId}.png`;
+                const panoramaPath = `/vrdeneme/assets/panoramas/${cleanId}.png`;
                 console.log('Panorama yükleniyor:', panoramaPath);
                 
+                // Önce img elementini güncelle
+                const panoramaImg = document.getElementById('panoramaImage');
+                panoramaImg.src = panoramaPath;
+                
+                // Sonra sky elementini güncelle
                 const sky = document.querySelector('a-sky');
-                sky.setAttribute('src', panoramaPath);
+                sky.setAttribute('src', '#panoramaImage');
                 
                 sky.addEventListener('loaded', function() {
                     console.log('Panorama başarıyla yüklendi');
