@@ -1,0 +1,156 @@
+<script>
+    window.addEventListener('load', function() {
+        const params = new URLSearchParams(window.location.search);
+        const panorama = params.get('panorama');
+        const title = params.get('title');
+        const loadingScreen = document.querySelector('#loading-screen');
+        const panoramaImage = document.querySelector('#panoramaImage');
+
+        if (panorama) {
+            panoramaImage.src = `assets/panoramas/${panorama}.png`;
+            
+            panoramaImage.onload = function() {
+                loadingScreen.style.display = 'none';
+            };
+            
+            panoramaImage.onerror = function() {
+                loadingScreen.textContent = 'Panorama yüklenemedi! Lütfen tekrar deneyin.';
+                console.error('Panorama yüklenemedi:', panoramaImage.src);
+            };
+        }
+
+        if (title) {
+            document.title = `${title} - VR Görüntüleyici`;
+        }
+    });
+</script>
+
+<style>
+    /* VR Kontrol Butonları */
+    .vr-controls {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 20px;
+        z-index: 1000;
+    }
+
+    .vr-button {
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+        border: 2px solid white;
+        padding: 10px 20px;
+        border-radius: 25px;
+        cursor: pointer;
+        font-family: 'Poppins', sans-serif;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .vr-button:hover {
+        background: rgba(0, 0, 0, 0.8);
+    }
+
+    .vr-button svg {
+        width: 24px;
+        height: 24px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+    }
+</style>
+
+<body>
+    <div id="loading-screen">Yükleniyor...</div>
+
+    <a-scene 
+        loading-screen="enabled: false"
+        vr-mode-ui="enabled: true; cardboardModeEnabled: true; enterVREnabled: true"
+        device-orientation-permission-ui="enabled: true">
+        
+        <a-assets>
+            <img id="panorama" crossorigin="anonymous">
+        </a-assets>
+
+        <a-sky id="skybox" src="#panorama" rotation="0 -90 0"></a-sky>
+
+        <a-entity position="0 1.6 0">
+            <a-camera look-controls="reverseMouseDrag: false" wasd-controls="enabled: true"></a-camera>
+        </a-entity>
+
+        <a-entity oculus-touch-controls="hand: left"></a-entity>
+        <a-entity oculus-touch-controls="hand: right"></a-entity>
+    </a-scene>
+
+    <div class="controls">
+        <button class="vr-button" id="vrButton">VR Modu</button>
+        <button class="vr-button" id="fullscreenButton">Tam Ekran</button>
+    </div>
+
+    <button class="back-button" onclick="window.location.href='gallery.html'">← Galeriye Dön</button>
+
+    <script>
+        const vrButton = document.getElementById('vrButton');
+        const fullscreenButton = document.getElementById('fullscreenButton');
+        const scene = document.querySelector('a-scene');
+        const loadingScreen = document.getElementById('loading-screen');
+        const panoramaImg = document.getElementById('panorama');
+        const skybox = document.getElementById('skybox');
+
+        vrButton.addEventListener('click', function() {
+            if (scene.hasLoaded) {
+                scene.enterVR();
+            }
+        });
+
+        fullscreenButton.addEventListener('click', function() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        window.addEventListener('load', function() {
+            const params = new URLSearchParams(window.location.search);
+            const panoramaPath = params.get('panorama');
+            const title = params.get('title');
+
+            if (panoramaPath) {
+                panoramaImg.src = `assets/panoramas/${panoramaPath}.png`;
+                
+                panoramaImg.onload = function() {
+                    loadingScreen.style.display = 'none';
+                    skybox.setAttribute('src', '#panorama');
+                };
+                
+                panoramaImg.onerror = function() {
+                    loadingScreen.textContent = 'Panorama yüklenemedi! Lütfen tekrar deneyin.';
+                    console.error('Panorama yüklenemedi:', panoramaImg.src);
+                };
+            }
+
+            if (title) {
+                document.title = `${title} - VR Görüntüleyici`;
+            }
+        });
+
+        if ('xr' in navigator) {
+            navigator.xr.isSessionSupported('immersive-vr')
+                .then(supported => {
+                    vrButton.style.display = supported ? 'block' : 'none';
+                });
+        } else {
+            vrButton.style.display = 'none';
+        }
+
+        if (/Mobi|Android/i.test(navigator.userAgent)) {
+            document.querySelector('.controls').style.bottom = '50px';
+        }
+    </script>
+</body>
+</html>
